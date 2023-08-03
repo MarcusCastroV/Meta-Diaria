@@ -1,24 +1,33 @@
 import DayState from '@/components/DayState'
-import Image from 'next/image'
+import DeleteButton from '@/components/DeleteButton'
+import { kv } from '@vercel/kv'
 import Link from 'next/link'
-export default function Home() {
-  const habits = {
-    'beber agua': {
-      '2023-08-01': true,
-      '2023-07-31': true,
-      '2023-07-30': false,
-    },
-    correr: {
-      '2023-08-01': false,
-      '2023-07-31': true,
-      '2023-07-30': false,
-    },
-  }
-  const today = new Date();
-  const todayWeekDay = today.getDay();
-  const weekDays = ['Dom', 'Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sab'];
 
-  const sortedWeekDays = weekDays.slice(todayWeekDay + 1).concat(weekDays.slice(0, todayWeekDay + 1));
+
+type Habits = {
+  [habit: string]: Record<string, boolean>
+} | null
+
+export default async function Home() {
+  const habits: Habits = await kv.hgetall('habits')
+
+  const today = new Date()
+  const todayWeekDay = today.getDay()
+  const weekDays = ['Dom', 'Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sab']
+
+  const sortedWeekDays = weekDays
+    .slice(todayWeekDay + 1)
+    .concat(weekDays.slice(0, todayWeekDay + 1))
+
+  const last7Days = weekDays
+    .map((_, index) => {
+      const date = new Date()
+      date.setDate(date.getDate() - index)
+
+      return date.toISOString().slice(0, 10)
+    })
+    .reverse()
+
   return (
     <main className='container relative flex flex-col gap-8 px-4 pt-16'>
       {habits === null ||
@@ -34,26 +43,28 @@ export default function Home() {
               <span className='text-xl font-light text-white font-sans'>
                 {habit}
               </span>
-              <button>
-                <Image
-                  src='/images/trash.svg'
-                  width={20}
-                  height={20}
-                  alt='Ícone de lixeira vermelha'
-                />
-              </button>
+              <DeleteButton habit={habit}/>
             </div>
-            <section className='grid grid-cols-7 bg-neutral-800 rounded-md p-2'>
-              {sortedWeekDays.map((day) => (
-                <div key='day' className='flex flex-col last:font-bold'>
-                  <span className='font-sans text-xs text-white text-center'>{day}</span>
-                  <DayState day={true}/>
-                </div>
-              ))}
-            </section>
+            <Link href={`habito/${habit}`}>
+              <section className='grid grid-cols-7 bg-neutral-800 rounded-md p-2'>
+                {sortedWeekDays.map((day, index) => (
+                  <div key='day' className='flex flex-col last:font-bold'>
+                    <span className='font-sans text-xs text-white text-center'>
+                      {day}
+                    </span>
+                    <DayState day={habitStreak[last7Days[index]]} />
+                  </div>
+                ))}
+              </section>
+            </Link>
           </div>
         ))}
-        <Link href='novo-habito' className='fixed text-center bottom-10 w-2/3 left-1/2 -translate-x-1/2 text-neutral-900 bg-[#45EDAD] font-display font-regular text-2xl p-2 rounded-md'>Novo hábito</Link>
+      <Link
+        href='novo-habito'
+        className='fixed text-center bottom-10 w-2/3 left-1/2 -translate-x-1/2 text-neutral-900 bg-[#45EDAD] font-display font-regular text-2xl p-2 rounded-md'
+      >
+        Novo hábito
+      </Link>
     </main>
   )
 }

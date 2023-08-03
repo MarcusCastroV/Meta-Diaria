@@ -1,10 +1,17 @@
+import { kv } from '@vercel/kv';
+import { revalidatePath } from 'next/cache'
+import { redirect } from 'next/navigation'
+
 function NewHabit () {
   async function newHabit(formData: FormData){
     "use server";
 
     const habit = formData.get('habit');
 
-    console.log(habit)
+    await kv.hset("habits", { [habit as string]: {} });
+
+    revalidatePath('/')
+    redirect('/')
   }
   return (  
     
